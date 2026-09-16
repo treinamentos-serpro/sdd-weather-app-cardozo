@@ -21,6 +21,10 @@ interface GeocodingResponse {
 interface ForecastCurrentResponse {
   temperature_2m?: number;
   weather_code?: number;
+  relative_humidity_2m?: number;
+  wind_speed_10m?: number;
+  precipitation?: number;
+  surface_pressure?: number;
 }
 
 interface ForecastDailyResponse {
@@ -28,6 +32,7 @@ interface ForecastDailyResponse {
   weather_code?: number[];
   temperature_2m_max?: number[];
   temperature_2m_min?: number[];
+  precipitation_probability_max?: Array<number | null>;
 }
 
 interface ForecastResponse {
@@ -114,6 +119,10 @@ function mapCurrentWeather(current: ForecastCurrentResponse): CurrentWeather {
   return {
     temperatureCelsius: current.temperature_2m,
     weatherCode: current.weather_code,
+    humidity: current.relative_humidity_2m,
+    windSpeedKmh: current.wind_speed_10m,
+    precipitationMm: current.precipitation,
+    pressureHpa: current.surface_pressure,
   };
 }
 
@@ -126,6 +135,7 @@ function mapForecastDays(daily: ForecastDailyResponse): ForecastDay[] {
   return dates.slice(0, FORECAST_DAYS).map((date, index) => ({
     date,
     weatherCode: daily.weather_code?.[index],
+    precipitationProbability: daily.precipitation_probability_max?.[index] ?? 0,
     minTemperatureCelsius: daily.temperature_2m_min?.[index],
     maxTemperatureCelsius: daily.temperature_2m_max?.[index],
   }));
@@ -135,8 +145,8 @@ export async function getWeather(city: City): Promise<WeatherData> {
   const params = new URLSearchParams({
     latitude: String(city.latitude),
     longitude: String(city.longitude),
-    current: 'temperature_2m,weather_code',
-    daily: 'weather_code,temperature_2m_max,temperature_2m_min',
+    current: 'temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m,precipitation,surface_pressure',
+    daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
     forecast_days: String(FORECAST_DAYS),
     timezone: 'auto',
     temperature_unit: 'celsius',

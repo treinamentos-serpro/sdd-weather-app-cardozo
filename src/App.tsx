@@ -7,21 +7,15 @@ import UnitToggle from './components/UnitToggle';
 import EmptyState from './components/states/EmptyState';
 import ErrorState from './components/states/ErrorState';
 import LoadingState from './components/states/LoadingState';
-import { mockWeatherData } from './lib/mock-weather';
+import { useWeather } from './hooks/useWeather';
 import type { Unit } from './types/weather';
-
-type ViewState = 'idle' | 'loading' | 'empty' | 'error' | 'success';
 
 export default function App() {
   const [unit, setUnit] = useState<Unit>('celsius');
-  const [viewState, setViewState] = useState<ViewState>('success');
-
-  const handleSearch = (_city: string) => {
-    setViewState('success');
-  };
+  const { status, data, error, search, retry } = useWeather();
 
   const renderContent = () => {
-    switch (viewState) {
+    switch (status) {
       case 'loading':
         return <LoadingState />;
       case 'empty':
@@ -29,17 +23,17 @@ export default function App() {
       case 'error':
         return (
           <ErrorState
-            message="Não foi possível carregar os dados meteorológicos."
-            onRetry={() => setViewState('success')}
+            message={error ?? 'Não foi possível carregar os dados meteorológicos.'}
+            onRetry={retry}
           />
         );
       case 'success':
-        return (
+        return data ? (
           <div className="space-y-8">
-            <CurrentWeather city={mockWeatherData.city} current={mockWeatherData.current} unit={unit} />
-            <ForecastList forecast={mockWeatherData.forecast} unit={unit} />
+            <CurrentWeather city={data.city} current={data.current} unit={unit} />
+            <ForecastList forecast={data.forecast} unit={unit} />
           </div>
-        );
+        ) : null;
       case 'idle':
         return (
           <EmptyState
@@ -68,7 +62,7 @@ export default function App() {
             Weather App
           </a>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <SearchBar disabled={viewState === 'loading'} onSearch={handleSearch} />
+            <SearchBar disabled={status === 'loading'} onSearch={search} />
             <UnitToggle onChange={setUnit} unit={unit} />
           </div>
         </div>
@@ -76,7 +70,7 @@ export default function App() {
       <main
         id="main-content"
         tabIndex={-1}
-        aria-busy={viewState === 'loading'}
+        aria-busy={status === 'loading'}
         className="mx-auto w-full max-w-6xl px-4 py-8 outline-none sm:px-6 lg:px-8"
       >
         {renderContent()}

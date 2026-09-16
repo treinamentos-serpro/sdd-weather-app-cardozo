@@ -5,10 +5,13 @@ const UNIT_SYMBOL: Record<Unit, string> = {
   fahrenheit: '°F',
 };
 
+export function unitLabel(unit: Unit): string {
+  return UNIT_SYMBOL[unit];
+}
+
 export function convertTemperature(temperatureCelsius: number, unit: Unit): number {
-  const temperature = unit === 'fahrenheit'
-    ? (temperatureCelsius * 9) / 5 + 32
-    : temperatureCelsius;
+  const temperature =
+    unit === 'fahrenheit' ? (temperatureCelsius * 9) / 5 + 32 : temperatureCelsius;
 
   return Math.round(temperature);
 }
@@ -18,5 +21,5 @@ export function formatTemperature(temperatureCelsius: number | undefined, unit: 
     return 'Indisponível';
   }
 
-  return `${convertTemperature(temperatureCelsius, unit)}${UNIT_SYMBOL[unit]}`;
+  return `${convertTemperature(temperatureCelsius, unit)}${unitLabel(unit)}`;
 }

@@ -2,6 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getWeather, searchCities, WeatherServiceError } from '../../src/services/weatherService';
 import type { City } from '../../src/types/weather';
 
+function stubOnlineStatus(online: boolean) {
+  vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(online);
+}
+
 function stubFetch(response: unknown, init: ResponseInit = {}) {
   const fetchMock = vi.fn().mockImplementation(async () =>
     new Response(JSON.stringify(response), {
@@ -160,6 +164,100 @@ describe('weatherService', () => {
 
       await expect(getWeather(city)).rejects.toThrow(WeatherServiceError);
       await expect(getWeather(city)).rejects.toThrow('Resposta de previsão incompleta: dados ausentes');
+    });
+
+    it('normalizes null or absent weather fields without exposing invalid values', async () => {
+      stubFetch({
+        timezone: 'America/Sao_Paulo',
+        current: {
+          temperature_2m: null,
+          weather_code: null,
+          relative_humidity_2m: null,
+          wind_speed_10m: null,
+          precipitation: null,
+          surface_pressure: null,
+        },
+        daily: {
+          time: ['2026-09-16', '2026-09-17', '2026-09-18', '2026-09-19', '2026-09-20'],
+        },
+      });
+
+      const result = await getWeather(city);
+
+      expect(result.current).toEqual({
+        temperatureCelsius: undefined,
+        weatherCode: undefined,
+        humidity: undefined,
+        windSpeedKmh: undefined,
+        precipitationMm: undefined,
+        pressureHpa: undefined,
+      });
+      expect(result.forecast).toHaveLength(5);
+      expect(result.forecast[0]).toMatchObject({
+        weatherCode: undefined,
+        minTemperatureCelsius: undefined,
+        maxTemperatureCelsius: undefined,
+        precipitationProbability: 0,
+      });
+    });
+  });
+
+  describe('rede offline', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('rejects immediately with a friendly offline message when navigator.onLine is false', async () => {
+      stubOnlineStatus(false);
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+
+      await expect(searchCities('Recife')).rejects.toMatchObject({
+        name: 'WeatherServiceError',
+        kind: 'offline',
+        message: expect.stringContaining('sem conexão'),
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('maps a failed fetch (e.g. DNS/connection failure) to a friendly offline error', async () => {
+      stubOnlineStatus(true);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockRejectedValue(new TypeError('Failed to fetch')),
+      );
+
+      await expect(getWeather(city)).rejects.toMatchObject({
+        name: 'WeatherServiceError',
+        kind: 'offline',
+      });
+    });
+
+    it('maps an aborted request to a clear timeout error', async () => {
+      vi.useFakeTimers();
+      stubOnlineStatus(true);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockImplementation(
+          (_url: string, options: { signal: AbortSignal }) =>
+            new Promise((_resolve, reject) => {
+              options.signal.addEventListener('abort', () => {
+                reject(new DOMException('Aborted', 'AbortError'));
+              });
+            }),
+        ),
+      );
+
+      const promise = getWeather(city);
+      const assertion = expect(promise).rejects.toMatchObject({
+        name: 'WeatherServiceError',
+        kind: 'timeout',
+        message: expect.stringContaining('demorou'),
+      });
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      await assertion;
+      vi.useRealTimers();
     });
   });
 });

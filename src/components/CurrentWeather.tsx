@@ -10,13 +10,13 @@ interface CurrentWeatherProps {
 
 interface MetricProps {
   label: string;
-  value: number | undefined;
+  value: number | null | undefined;
   suffix: string;
 }
 
-function formatMetric(value: number | undefined, suffix: string): string {
-  if (value === undefined || !Number.isFinite(value)) {
-    return 'Indisponível';
+function formatMetric(value: number | null | undefined, suffix: string): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return '—';
   }
 
   return `${Math.round(value)}${suffix}`;

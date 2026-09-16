@@ -5,13 +5,13 @@ const FORECAST_ENDPOINT = 'https://api.open-meteo.com/v1/forecast';
 const FORECAST_DAYS = 5;
 
 interface GeocodingResult {
-  id?: number;
-  name?: string;
-  admin1?: string;
-  country?: string;
-  country_code?: string;
-  latitude?: number;
-  longitude?: number;
+  id?: number | null;
+  name?: string | null;
+  admin1?: string | null;
+  country?: string | null;
+  country_code?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface GeocodingResponse {
@@ -19,19 +19,19 @@ interface GeocodingResponse {
 }
 
 interface ForecastCurrentResponse {
-  temperature_2m?: number;
-  weather_code?: number;
-  relative_humidity_2m?: number;
-  wind_speed_10m?: number;
-  precipitation?: number;
-  surface_pressure?: number;
+  temperature_2m?: number | null;
+  weather_code?: number | null;
+  relative_humidity_2m?: number | null;
+  wind_speed_10m?: number | null;
+  precipitation?: number | null;
+  surface_pressure?: number | null;
 }
 
 interface ForecastDailyResponse {
-  time?: string[];
-  weather_code?: number[];
-  temperature_2m_max?: number[];
-  temperature_2m_min?: number[];
+  time?: Array<string | null>;
+  weather_code?: Array<number | null>;
+  temperature_2m_max?: Array<number | null>;
+  temperature_2m_min?: Array<number | null>;
   precipitation_probability_max?: Array<number | null>;
 }
 
@@ -55,6 +55,10 @@ export class WeatherServiceError extends Error {
 }
 
 const REQUEST_TIMEOUT_MS = 10_000;
+
+function finiteNumber(value: number | null | undefined): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
 
 function isOffline(): boolean {
   return typeof navigator !== 'undefined' && navigator.onLine === false;
@@ -137,7 +141,7 @@ export async function searchCities(name: string): Promise<City[]> {
   const data = await parseJson<GeocodingResponse>(response);
 
   return (data.results ?? []).filter(isGeocodingResult).map((result) => ({
-    id: result.id,
+    id: result.id ?? undefined,
     name: result.name,
     region: result.admin1,
     country: result.country,
@@ -149,12 +153,12 @@ export async function searchCities(name: string): Promise<City[]> {
 
 function mapCurrentWeather(current: ForecastCurrentResponse): CurrentWeather {
   return {
-    temperatureCelsius: current.temperature_2m,
-    weatherCode: current.weather_code,
-    humidity: current.relative_humidity_2m,
-    windSpeedKmh: current.wind_speed_10m,
-    precipitationMm: current.precipitation,
-    pressureHpa: current.surface_pressure,
+    temperatureCelsius: finiteNumber(current.temperature_2m),
+    weatherCode: finiteNumber(current.weather_code),
+    humidity: finiteNumber(current.relative_humidity_2m),
+    windSpeedKmh: finiteNumber(current.wind_speed_10m),
+    precipitationMm: finiteNumber(current.precipitation),
+    pressureHpa: finiteNumber(current.surface_pressure),
   };
 }
 
@@ -164,12 +168,19 @@ function mapForecastDays(daily: ForecastDailyResponse): ForecastDay[] {
     throw new WeatherServiceError('Resposta de previsão incompleta: dias insuficientes', 'parse');
   }
 
-  return dates.slice(0, FORECAST_DAYS).map((date, index) => ({
-    date,
-    weatherCode: daily.weather_code?.[index],
-    precipitationProbability: daily.precipitation_probability_max?.[index] ?? 0,
-    minTemperatureCelsius: daily.temperature_2m_min?.[index],
-    maxTemperatureCelsius: daily.temperature_2m_max?.[index],
+    const forecastDates = dates
+      .slice(0, FORECAST_DAYS)
+      .filter((date): date is string => typeof date === 'string' && date.trim().length > 0);
+    if (forecastDates.length < FORECAST_DAYS) {
+      throw new WeatherServiceError('Resposta de previsão incompleta: datas ausentes', 'parse');
+    }
+
+    return forecastDates.map((date, index) => ({
+      date,
+    weatherCode: finiteNumber(daily.weather_code?.[index]),
+    precipitationProbability: finiteNumber(daily.precipitation_probability_max?.[index]) ?? 0,
+    minTemperatureCelsius: finiteNumber(daily.temperature_2m_min?.[index]),
+    maxTemperatureCelsius: finiteNumber(daily.temperature_2m_max?.[index]),
   }));
 }
 

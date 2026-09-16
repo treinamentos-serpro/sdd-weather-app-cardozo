@@ -32,8 +32,8 @@ const UNAVAILABLE_CONDITION: WeatherCondition = {
   icon: '🌡️',
 };
 
-export function getWeatherCondition(weatherCode: number | undefined): WeatherCondition {
-  if (weatherCode === undefined || !Number.isFinite(weatherCode)) {
+export function getWeatherCondition(weatherCode: number | null | undefined): WeatherCondition {
+  if (weatherCode === null || weatherCode === undefined || !Number.isFinite(weatherCode)) {
     return UNAVAILABLE_CONDITION;
   }
 

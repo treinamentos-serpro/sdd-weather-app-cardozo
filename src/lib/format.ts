@@ -24,6 +24,10 @@ function parseLocalDate(iso: string): Date {
   return new Date(year, (month ?? 1) - 1, day ?? 1);
 }
 
+function isValidDate(iso: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(iso) && Number.isFinite(parseLocalDate(iso).getTime());
+}
+
 /**
  * Rótulo do dia relativo a "hoje":
  * - índice 0 → "Hoje"
@@ -31,6 +35,7 @@ function parseLocalDate(iso: string): Date {
  * - demais → dia da semana abreviado
  */
 export function getDayLabel(iso: string, index: number): string {
+  if (!isValidDate(iso)) return 'Data indisponível';
   if (index === 0) return 'Hoje';
   if (index === 1) return 'Amanhã';
   const date = parseLocalDate(iso);

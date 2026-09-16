@@ -9,9 +9,9 @@ interface ForecastCardProps {
   unit: Unit;
 }
 
-function formatPrecipitationProbability(value: number | undefined): string {
-  if (value === undefined || !Number.isFinite(value)) {
-    return 'Indisponível';
+function formatPrecipitationProbability(value: number | null | undefined): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return '—';
   }
 
   return `${Math.round(value)}%`;

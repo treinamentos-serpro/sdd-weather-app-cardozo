@@ -16,9 +16,9 @@ export function convertTemperature(temperatureCelsius: number, unit: Unit): numb
   return Math.round(temperature);
 }
 
-export function formatTemperature(temperatureCelsius: number | undefined, unit: Unit): string {
-  if (temperatureCelsius === undefined || !Number.isFinite(temperatureCelsius)) {
-    return 'Indisponível';
+export function formatTemperature(temperatureCelsius: number | null | undefined, unit: Unit): string {
+  if (temperatureCelsius === null || temperatureCelsius === undefined || !Number.isFinite(temperatureCelsius)) {
+    return '—';
   }
 
   return `${convertTemperature(temperatureCelsius, unit)}${unitLabel(unit)}`;

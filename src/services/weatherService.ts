@@ -41,16 +41,33 @@ interface ForecastResponse {
   daily?: ForecastDailyResponse;
 }
 
+/** Categoria da falha, usada para mensagens e testes mais precisos. */
+export type WeatherServiceErrorKind = 'offline' | 'timeout' | 'http' | 'parse' | 'unknown';
+
 export class WeatherServiceError extends Error {
-  constructor(message: string) {
+  readonly kind: WeatherServiceErrorKind;
+
+  constructor(message: string, kind: WeatherServiceErrorKind = 'unknown') {
     super(message);
     this.name = 'WeatherServiceError';
+    this.kind = kind;
   }
 }
 
 const REQUEST_TIMEOUT_MS = 10_000;
 
+function isOffline(): boolean {
+  return typeof navigator !== 'undefined' && navigator.onLine === false;
+}
+
 async function fetchWithTimeout(url: string): Promise<Response> {
+  if (isOffline()) {
+    throw new WeatherServiceError(
+      'Você está sem conexão com a internet. Verifique sua rede e tente novamente.',
+      'offline',
+    );
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -58,9 +75,21 @@ async function fetchWithTimeout(url: string): Promise<Response> {
     return await fetch(url, { signal: controller.signal });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new WeatherServiceError('A requisição demorou demais.');
+      throw new WeatherServiceError(
+        'A requisição demorou demais para responder. Tente novamente em instantes.',
+        'timeout',
+      );
     }
-    throw new WeatherServiceError('Falha de rede.');
+    if (isOffline()) {
+      throw new WeatherServiceError(
+        'Você está sem conexão com a internet. Verifique sua rede e tente novamente.',
+        'offline',
+      );
+    }
+    throw new WeatherServiceError(
+      'Não foi possível conectar ao serviço de clima. Verifique sua conexão e tente novamente.',
+      'offline',
+    );
   } finally {
     clearTimeout(timeoutId);
   }
@@ -70,7 +99,7 @@ async function parseJson<T>(response: Response): Promise<T> {
   try {
     return (await response.json()) as T;
   } catch {
-    throw new WeatherServiceError('Resposta inválida do servidor.');
+    throw new WeatherServiceError('Resposta inválida do servidor. Tente novamente.', 'parse');
   }
 }
 
@@ -99,7 +128,10 @@ export async function searchCities(name: string): Promise<City[]> {
   const response = await fetchWithTimeout(url);
 
   if (!response.ok) {
-    throw new WeatherServiceError(`Falha ao buscar cidades: HTTP ${response.status}`);
+    throw new WeatherServiceError(
+      `Falha ao buscar cidades: HTTP ${response.status}`,
+      'http',
+    );
   }
 
   const data = await parseJson<GeocodingResponse>(response);
@@ -129,7 +161,7 @@ function mapCurrentWeather(current: ForecastCurrentResponse): CurrentWeather {
 function mapForecastDays(daily: ForecastDailyResponse): ForecastDay[] {
   const dates = daily.time ?? [];
   if (dates.length < FORECAST_DAYS) {
-    throw new WeatherServiceError('Resposta de previsão incompleta: dias insuficientes');
+    throw new WeatherServiceError('Resposta de previsão incompleta: dias insuficientes', 'parse');
   }
 
   return dates.slice(0, FORECAST_DAYS).map((date, index) => ({
@@ -155,13 +187,13 @@ export async function getWeather(city: City): Promise<WeatherData> {
   const response = await fetchWithTimeout(`${FORECAST_ENDPOINT}?${params.toString()}`);
 
   if (!response.ok) {
-    throw new WeatherServiceError(`Falha ao buscar previsão: HTTP ${response.status}`);
+    throw new WeatherServiceError(`Falha ao buscar previsão: HTTP ${response.status}`, 'http');
   }
 
   const data = await parseJson<ForecastResponse>(response);
 
   if (!data.current || !data.daily || !data.timezone) {
-    throw new WeatherServiceError('Resposta de previsão incompleta: dados ausentes');
+    throw new WeatherServiceError('Resposta de previsão incompleta: dados ausentes', 'parse');
   }
 
   return {

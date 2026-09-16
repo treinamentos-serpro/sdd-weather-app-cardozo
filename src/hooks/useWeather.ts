@@ -31,28 +31,42 @@ export function useWeather(): UseWeatherResult {
 
   // Guarda a última operação disparada para permitir refazê-la em retry().
   const lastOperationRef = useRef<() => Promise<void>>(async () => {});
+  // Identifica a operação mais recente para descartar respostas de buscas antigas (fora de ordem).
+  const operationIdRef = useRef(0);
 
-  const loadWeatherForCity = useCallback(async (city: City) => {
-    setStatus('loading');
-    setError(null);
+  const fetchWeatherForCity = useCallback(async (city: City, operationId: number) => {
     try {
       const weather = await getWeather(city);
+      if (operationId !== operationIdRef.current) return;
       setData(weather);
       setStatus('success');
     } catch (err) {
+      if (operationId !== operationIdRef.current) return;
       setError(getErrorMessage(err));
       setStatus('error');
     }
   }, []);
 
+  const loadWeatherForCity = useCallback(
+    async (city: City) => {
+      const operationId = ++operationIdRef.current;
+      setStatus('loading');
+      setError(null);
+      await fetchWeatherForCity(city, operationId);
+    },
+    [fetchWeatherForCity],
+  );
+
   const runSearch = useCallback(
     async (name: string) => {
+      const operationId = ++operationIdRef.current;
       setStatus('loading');
       setError(null);
       setData(null);
 
       try {
         const results = await searchCities(name);
+        if (operationId !== operationIdRef.current) return;
         setCities(results);
 
         if (results.length === 0) {
@@ -60,13 +74,14 @@ export function useWeather(): UseWeatherResult {
           return;
         }
 
-        await loadWeatherForCity(results[0]);
+        await fetchWeatherForCity(results[0], operationId);
       } catch (err) {
+        if (operationId !== operationIdRef.current) return;
         setError(getErrorMessage(err));
         setStatus('error');
       }
     },
-    [loadWeatherForCity],
+    [fetchWeatherForCity],
   );
 
   const search = useCallback(

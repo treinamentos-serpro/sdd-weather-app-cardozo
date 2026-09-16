@@ -12,7 +12,7 @@ Este documento complementa `tasks/weather-app-tasks.md` com a classificação, a
 | T-04 | P0 | P |
 | T-05 | P0 | P |
 | T-06 | P0 | P |
-| T-07 | P1 | P |
+| T-07 | P0 | P |
 | T-08 | P0 | P |
 | T-09 | P0 | M |
 | T-10 | P0 | M |
@@ -23,7 +23,7 @@ Este documento complementa `tasks/weather-app-tasks.md` com a classificação, a
 | T-15 | P0 | M |
 | T-16 | P0 | P |
 | T-17 | P0 | M |
-| T-18 | P1 | P |
+| T-18 | P0 | P |
 | T-19 | P0 | M |
 | T-20 | P0 | M |
 | T-21 | P0 | P |
@@ -34,16 +34,17 @@ Este documento complementa `tasks/weather-app-tasks.md` com a classificação, a
 | T-26 | P0 | G |
 | T-27 | P0 | M |
 
-P0 bloqueia o fluxo principal ou um requisito obrigatório. P1 completa comportamento previsto sem impedir a primeira demonstração. P2 fica reservado para melhorias fora do escopo atual; não há tarefa P2 neste backlog.
+P0 bloqueia o fluxo principal ou um requisito obrigatório. P1 amplia a evidência e a robustez depois do fluxo principal, sem impedir a primeira demonstração. P2 fica reservado para melhorias fora do escopo atual; não há tarefa P2 neste backlog.
 
 ## Fatias verticais de entrega
 
-1. **Fatia 0 - Base verificável:** T-01 a T-06. Configuração, contratos, validação de busca e conversão de temperatura testável.
-2. **Fatia 1 - Primeira previsão visível:** T-07 a T-14, T-16, T-17 e T-20. Busca de cidade com resultado único e visualização de clima atual e cinco dias.
-3. **Fatia 2 - Escolha e recuperação confiáveis:** T-15, T-19, T-12 e T-13. Cidades homônimas, estados de feedback, retry e concorrência segura.
-4. **Fatia 3 - Experiência completa e evidências:** T-18 e T-21 a T-27. Troca de unidade, cobertura unitária/service/componente/E2E, responsividade e hardening.
+1. **Fatia 0 - Base executável:** T-01 e T-02. Configuração validada e shell React renderizando; já há algo visível, embora sem funcionalidade meteorológica.
+2. **Fatia 1 - Contratos e caminho de dados:** T-03 a T-13. Tipos, validação, conversões, parsing, clientes HTTP, reducer e hook prontos para a UI.
+3. **Fatia 2 - Primeira previsão visível:** T-14 a T-20. Formulário, seleção, feedback, clima atual, cinco dias, unidade e composição da tela; começa pelo caso de uma cidade.
+4. **Fatia 3 - Evidência automatizada:** T-21 a T-26. Testes unitários, serviços, reducer/hook, componentes e fluxos E2E, incluindo estados alternativos e responsividade.
+5. **Fatia 4 - Release hardening:** T-27. Validação final, acessibilidade, concorrência, timeout, campos ausentes e execução completa da suíte.
 
-T-12 e T-13 devem ser concluídas antes dos componentes que as consomem e da integração final de T-20. A primeira demonstração ocorre após a Fatia 1; a Fatia 3 fornece evidência automatizada do comportamento estabilizado.
+As fatias respeitam as dependências declaradas: T-12 e T-13 vêm antes dos componentes, e T-20 só entra depois de T-14 a T-19. A primeira demonstração do produto acontece na Fatia 2; a Fatia 0 entrega feedback visual imediato sobre a aplicação inicial.
 
 ## Matriz de rastreabilidade: requisitos funcionais
 

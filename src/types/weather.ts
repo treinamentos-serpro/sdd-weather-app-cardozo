@@ -25,6 +25,14 @@ export interface CurrentWeather {
   temperatureCelsius?: number;
   /** Código de condição meteorológica WMO, quando disponível. */
   weatherCode?: number;
+  /** Umidade relativa do ar em porcentagem, quando disponível. */
+  humidity?: number;
+  /** Velocidade do vento em km/h, quando disponível. */
+  windSpeedKmh?: number;
+  /** Precipitação acumulada em milímetros, quando disponível. */
+  precipitationMm?: number;
+  /** Pressão atmosférica em hPa, quando disponível. */
+  pressureHpa?: number;
 }
 
 /** Previsão meteorológica de um único dia. */
@@ -33,6 +41,8 @@ export interface ForecastDay {
   date: string;
   /** Código de condição meteorológica WMO previsto para o dia. */
   weatherCode?: number;
+  /** Probabilidade máxima de precipitação prevista, em porcentagem. */
+  precipitationProbability?: number;
   /** Temperatura mínima prevista em Celsius. */
   minTemperatureCelsius?: number;
   /** Temperatura máxima prevista em Celsius. */

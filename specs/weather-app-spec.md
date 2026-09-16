@@ -1,267 +1,232 @@
-# Weather App Product Specification
+# Especificação do Produto: Weather App
 
-## Overview
+## 1. Objetivo e escopo
 
-This product is a responsive web application for checking the weather of cities of interest. The primary goal is to provide a fast, simple, and reliable experience for users who want to know the current conditions and the next five days of forecast for a city, without requiring authentication or complex setup.
+Aplicação web responsiva para consultar, em português do Brasil, as condições atuais e a previsão diária de uma cidade. A consulta começa pelo nome da cidade, permite a seleção quando houver mais de um resultado e exibe cinco dias de previsão: hoje e os quatro dias seguintes.
 
-The application must support mobile-first usage, clear presentation of meteorological information, and easy switching between Celsius and Fahrenheit. It should present loading, error, and empty states clearly, and it should allow users to repeat searches after success or failure.
+O produto não exige autenticação, não salva favoritos e não mantém dados em servidor. A fonte de dados da primeira versão é a Open-Meteo, usando os serviços de geocoding e forecast.
 
-The initial version focuses on weather lookup by city name using Open-Meteo as the data source. The UI language will be Brazilian Portuguese, and the default temperature unit will be Celsius.
+### 1.1 Fora de escopo
 
----
+- Geolocalização automática, mapas e seleção por coordenadas no mapa.
+- Contas, autenticação, favoritos, histórico persistente ou sincronização.
+- Previsão horária, alertas, notificações, compartilhamento e dados históricos.
+- Suporte a idiomas além de pt-BR.
 
-## Functional Requirements
+## 2. Público e histórias de usuário
 
-### FR1 — Search for cities by name
-The application must allow the user to type a city name and initiate a search.
+- Como usuário, quero buscar uma cidade pelo nome para consultar rapidamente o clima.
+- Como usuário, quero distinguir cidades homônimas antes de consultar a previsão.
+- Como usuário, quero ver o clima atual e cinco dias de previsão em uma leitura rápida.
+- Como usuário, quero alternar entre Celsius e Fahrenheit sem refazer a busca.
+- Como usuário em uma conexão instável, quero receber estados claros de carregamento e erro e poder tentar novamente.
+- Como usuário mobile, quero realizar todo o fluxo sem perder conteúdo ou funcionalidade.
 
-Acceptance Criteria:
-- Given the search form is visible, when the user enters a city name, then the city name is shown in the input field.
-- Given the input contains a city name, when the user submits the form using the search button or keyboard, then the app starts a search request.
-- Given the input is empty or contains only whitespace, when the user submits the form, then the app does not start a search request and shows a validation message asking for a city name.
+## 3. Requisitos funcionais
 
-### FR2 — Display the current weather for the selected city
-The application must show the current weather for the city selected by the user.
+### RF-01 — Buscar uma cidade
 
-Acceptance Criteria:
-- Given a valid city has been selected and its weather request succeeds, when the response is rendered, then the app displays a current weather summary for that city.
-- Given the current weather summary is displayed, when the user views it, then it includes the selected city name and at least one current condition or temperature.
-- Given the weather service returns no data for the selected city, when the response is processed, then the app displays a meaningful no-results message instead of an empty weather panel.
-- Given the user selects a different valid city, when the new weather request succeeds, then the current weather summary shows the newly selected city and its data.
+O sistema deve oferecer um formulário com um campo de texto e uma ação de busca.
 
-### FR3 — Display a five-day forecast
-The application must present a forecast for today and the following four days for the selected city, totaling five daily entries.
+Regras:
 
-Acceptance Criteria:
-- Given a valid city weather request succeeds, when the forecast is rendered, then the app displays five daily entries.
-- Given the five daily entries are displayed, when the user inspects their dates, then they represent the current day and the next four days in chronological order.
-- Given a daily forecast entry is displayed, when the user views it, then the entry has a visible date label.
-- Given forecast data is missing for one or more days, when the forecast is rendered, then the affected entries show a placeholder or clear message and the forecast layout remains usable.
+- O valor submetido deve ser normalizado removendo espaços no início e no fim.
+- O valor normalizado deve conter pelo menos um caractere.
+- Para valor vazio, o sistema não deve chamar a API e deve exibir uma mensagem de validação associada ao campo.
+- A submissão deve funcionar pelo botão e pela tecla Enter.
+- O texto pesquisado deve permanecer disponível enquanto a busca estiver em andamento e após erro.
 
-### FR4 — Allow temperature unit switching between Celsius and Fahrenheit
-The application must support toggling the displayed temperature unit between Celsius and Fahrenheit.
+### RF-02 — Resolver a cidade
 
-Acceptance Criteria:
-- Given the weather view is displayed for the first time, when the user inspects the temperature unit, then Celsius is selected by default.
-- Given the weather view is displayed, when the user inspects the controls, then there is an identifiable control for switching between Celsius and Fahrenheit.
-- Given the user selects a temperature unit, when the selection is applied, then the chosen unit is visibly reflected in the control and weather values.
-- Given current weather and forecast values are displayed, when the user switches the temperature unit, then both sections immediately display the selected unit without a new search.
+Para um termo válido, o sistema deve consultar o endpoint de geocoding e apresentar as localidades retornadas antes de consultar o clima quando houver mais de uma opção.
 
-### FR5 — Update displayed values when the temperature unit changes
-The application must recalculate and refresh all temperature values after a user changes units.
+Cada opção deve exibir, quando disponível, nome da cidade, estado/região, país e código do país. Latitude e longitude podem ser usadas como contexto adicional, mas não substituem o nome e o país.
 
-Acceptance Criteria:
-- Given temperatures are displayed in Celsius, when the user switches to Fahrenheit, then every displayed temperature uses the Celsius-to-Fahrenheit conversion and the Fahrenheit unit.
-- Given temperatures are displayed in Fahrenheit, when the user switches to Celsius, then every displayed temperature uses the Fahrenheit-to-Celsius conversion and the Celsius unit.
-- Given current weather and forecast temperatures are displayed, when the user changes units, then the same conversion behavior is applied to both sections.
-- Given a weather result is already loaded, when the user changes units, then the converted values are visible without another weather request.
+Regras:
 
-### FR6 — Handle cities with the same name
-The application must help the user distinguish cities that share the same name.
+- Zero resultados: exibir estado vazio e manter o formulário utilizável.
+- Um resultado: selecionar a localidade automaticamente e iniciar a consulta meteorológica.
+- Dois ou mais resultados: exibir opções selecionáveis e não consultar o clima antes da seleção.
+- A seleção deve usar o identificador lógico da localidade (nome, país, latitude e longitude), não apenas o texto digitado.
+- Uma nova busca deve substituir as opções e resultados anteriores quando começar.
 
-Acceptance Criteria:
-- Given a search term matches multiple cities, when the geocoding response is rendered, then the app displays a list of the matching cities instead of selecting one automatically.
-- Given multiple city options are displayed, when the user views an option, then it includes identifying context such as country, state, or coordinates.
-- Given multiple city options are displayed, when the user selects one option, then the app uses that city to request and display weather data.
-- Given a search term matches multiple cities, when the results are displayed, then no city is used for the weather request before the user selects an option.
+### RF-03 — Consultar e exibir o clima atual
 
-### FR7 — Inform the user about loading, error, and empty states
-The application must communicate the state of the request clearly at all times.
+Após a seleção da localidade, o sistema deve consultar o forecast usando latitude e longitude e exibir:
 
-Acceptance Criteria:
-- Given a search has been submitted and the request is still pending, when the user views the app, then a loading indicator or equivalent loading state is visible.
-- Given a search request fails, when the failure is received, then the app displays a readable error message and a retry action.
-- Given the geocoding service returns no cities, when the response is rendered, then the app displays a no-results message and keeps the search form available.
-- Given a search request succeeds, when the result is rendered, then the previous loading indicator and error message are no longer visible.
+- nome da localidade selecionada e país;
+- temperatura atual;
+- condição meteorológica legível em pt-BR, derivada do código WMO;
+- unidade da temperatura aplicada à tela.
 
-### FR8 — Allow the user to perform another search after success or failure
-The application must support repeated searches without reloading the page.
+Se os dados atuais não estiverem disponíveis, a tela deve exibir uma mensagem explícita para esse dado, sem inventar um valor ou renderizar `undefined`, `null` ou `NaN`.
 
-Acceptance Criteria:
-- Given a search has completed successfully, when the user enters and submits a new city name, then the app starts a new search without reloading the page.
-- Given a search has failed, when the user enters a corrected or different city name and submits it, then the app starts a retry search immediately.
-- Given a new search succeeds, when its result is rendered, then it replaces the previous weather result or error state.
-- Given the user performs multiple searches sequentially, when each search completes, then the search form and result area remain usable for the next search.
+### RF-04 — Exibir a previsão diária
 
----
+O sistema deve exibir exatamente cinco entradas diárias, correspondentes à data atual e às quatro datas seguintes no fuso horário retornado pela API.
 
-## User Stories
+Cada entrada deve exibir:
 
-### Como viajante, quero pesquisar uma cidade por nome para consultar rapidamente o clima atual e decidir o que levar na viagem (RF1, RF2).
+- data formatada em pt-BR;
+- condição meteorológica legível em pt-BR;
+- temperatura mínima;
+- temperatura máxima;
+- unidade aplicada.
 
-### Como comutador, quero visualizar a previsão de hoje e dos quatro dias seguintes para planejar minha semana com base nas temperaturas e condições do tempo (RF3).
+As entradas devem estar em ordem cronológica. Dados ausentes em uma entrada devem ser representados por um placeholder ou mensagem de indisponibilidade, sem remover ou reordenar a entrada.
 
-### Como usuário em outra região, quero alternar entre Celsius e Fahrenheit para ler as temperaturas na unidade que prefiro (RF4, RF5).
+### RF-05 — Alternar unidade de temperatura
 
-### Como usuário procurando uma cidade com nome comum, quero ver informações de diferenciação entre os resultados para escolher a cidade correta com confiança (RF6).
+O sistema deve oferecer um controle acessível para Celsius e Fahrenheit, com Celsius selecionado inicialmente.
 
-### Como usuário mobile, quero utilizar a interface em telas pequenas para consultar o clima de qualquer lugar sem perder funcionalidade (RF1, RF7, RF8).
+Regras:
 
-### Como usuário com conexão instável, quero receber mensagens claras de carregamento e erro para entender o estado da aplicação e tentar novamente sem confusão (RF7, RF8).
+- A alteração deve atualizar o clima atual e todas as entradas diárias sem nova requisição.
+- A fórmula deve ser `F = (C × 9 / 5) + 32` e `C = (F − 32) × 5 / 9`.
+- A camada de apresentação deve arredondar os valores exibidos para o inteiro mais próximo e mostrar o símbolo correspondente (`°C` ou `°F`).
+- Os dados-base devem permanecer em Celsius ou sem conversão acumulada; alternâncias repetidas devem produzir o mesmo resultado.
+- O controle deve indicar visualmente e semanticamente a unidade ativa.
 
----
+### RF-06 — Estados da interface
 
-## Acceptance Criteria
+O sistema deve comunicar os estados abaixo:
 
-### Functional acceptance scenarios
-1. User enters a valid city name and submits the search.
-   - The app displays a loading state.
-   - The app fetches weather data for the selected city.
-   - The app renders the current weather and the forecast for today and the following four days.
+- **Inicial:** formulário disponível e nenhuma previsão exibida.
+- **Validando:** erro do campo, sem requisição externa.
+- **Carregando localização:** busca de cidades em andamento.
+- **Selecionando localização:** opções de localidades disponíveis.
+- **Carregando clima:** forecast em andamento após seleção.
+- **Sucesso:** localidade, clima atual e cinco entradas diárias disponíveis.
+- **Vazio:** nenhuma localidade encontrada ou nenhum dado meteorológico utilizável.
+- **Erro:** falha de rede, timeout ou resposta inválida, com mensagem compreensível e ação de tentar novamente.
 
-2. User enters an empty value.
-   - The app does not submit the request.
-   - A validation message instructs the user to enter a city name.
+Durante uma requisição, o controle que iniciou a ação deve indicar carregamento e impedir submissões duplicadas equivalentes. O formulário deve continuar acessível para iniciar uma nova busca quando isso não causar ambiguidade.
 
-3. User searches for a city name that matches multiple locations.
-   - The app displays a list of possible matches.
-   - Each result includes enough identifying context to differentiate them.
-   - The user can select the correct city.
+### RF-07 — Repetir e substituir consultas
 
-4. User changes the unit from Celsius to Fahrenheit.
-   - All temperature values update to the new unit.
-   - The current weather and the daily forecast use the same unit conversion logic.
+- A ação de tentar novamente deve repetir a última operação válida sem exigir que o usuário redigite o nome.
+- Uma nova busca após sucesso ou erro deve funcionar sem recarregar a página.
+- Se duas buscas forem iniciadas em sequência, somente a resposta da busca mais recente pode alterar a tela.
+- Uma resposta antiga não pode sobrescrever o resultado, erro ou seleção da busca atual.
 
-5. User searches while the network is unavailable or the request fails.
-   - The app shows an understandable error message.
-   - The user can retry without reloading the page.
+## 4. Contrato de integração
 
-6. User performs multiple searches in sequence.
-   - Previous results are replaced by the latest valid result.
-   - Previous loading or error states are cleared appropriately.
-   - The app remains responsive and usable.
+### 4.1 Geocoding
 
-7. User wants to check a different city after viewing results.
-   - The app allows a new search without navigating away or leaving the page.
+Consultar `https://geocoding-api.open-meteo.com/v1/search` com:
 
-### Definition of done
-- All functional requirements are implemented and validated.
-- The app handles core success and error paths.
-- Temperature behavior is correct and consistent.
-- The application is usable on mobile, tablet, and desktop layouts.
-- The interface is accessible through keyboard and semantic labels.
+- `name`: termo normalizado;
+- `count`: quantidade limitada de resultados definida pela implementação;
+- `language=pt`;
+- `format=json`.
 
----
+O cliente deve aceitar a ausência de `results` como lista vazia e considerar inválida uma opção sem nome ou coordenadas numéricas.
 
-## Non-Functional Requirements
+### 4.2 Forecast
 
-### NFR1 — Responsiveness
-The application must be usable on mobile, tablet, and desktop devices, with layouts adapted to smaller screens without losing readability or core functionality.
+Consultar `https://api.open-meteo.com/v1/forecast` com latitude, longitude e:
 
-### NFR2 — Accessibility
-All interactive controls must be keyboard accessible. Inputs, buttons, and switches must have clear labels and semantics. The interface must remain understandable for assistive technologies.
+- `current=temperature_2m,weather_code`;
+- `daily=weather_code,temperature_2m_max,temperature_2m_min`;
+- `forecast_days=5`;
+- `timezone=auto`;
+- `temperature_unit=celsius`.
 
-### NFR3 — Performance
-Searches and interface updates must feel fast under normal network conditions. Loading and result states must appear promptly so the user is not left without feedback.
+O cliente deve validar a presença de cinco datas diárias e alinhar cada temperatura pelo índice da data correspondente. Respostas HTTP não bem-sucedidas, JSON inválido, ausência de coordenadas ou contrato incompatível devem resultar em erro tratável.
 
-### NFR4 — Usability
-Weather data must be organized in a clear and scannable layout. Key information such as temperature, date, and conditions should be easy to read without additional effort.
+### 4.3 Condições meteorológicas
 
-### NFR5 — Resilience
-The app must handle service unavailability or network failures gracefully. It must display meaningful error messages and allow retry without data loss or an unusable state.
+Os códigos WMO recebidos devem ser mapeados para rótulos em pt-BR. O mapeamento deve cobrir, no mínimo, céu limpo, parcialmente nublado, nublado, neblina, chuva, neve, tempestade e códigos desconhecidos. Um código desconhecido deve produzir o rótulo neutro “Condição indisponível”, sem quebrar a tela.
 
-### NFR6 — Compatibility
-The product must work on modern browsers supported by the project stack and should avoid browser-specific behaviors that break the main flow.
+## 5. Critérios de aceitação
 
-### NFR7 — Internationalization
-The UI and formatting should be consistent with the chosen language and region. Temperature units, date formats, and interface text should align with Brazilian Portuguese conventions.
+### CA-01 — Busca válida
 
-### NFR8 — Privacy
-The application must not require authentication or collect personal data beyond what is necessary to provide weather information. It should not store or transmit unrelated user information.
+**Dado** que o formulário está disponível, **quando** o usuário envia ` São Paulo `, **então** o sistema consulta o geocoding com o valor `São Paulo`, exibe carregamento e mantém a interface utilizável.
 
----
+### CA-02 — Busca vazia
 
-## Edge Cases
+**Dado** que o campo contém apenas espaços, **quando** o usuário envia o formulário, **então** nenhuma API é chamada, o campo recebe uma mensagem de validação e o foco pode retornar ao campo.
 
-- Search term is empty or contains only spaces.
-- Search term includes uppercase or lowercase variations.
-- City name matches many different locations in different countries or states.
-- Search result contains no valid weather data.
-- Weather API is temporarily unavailable.
-- User changes units repeatedly in quick succession.
-- User performs a second search before the first request completes.
-- Weather data for a specific day is incomplete or missing.
-- Browser is in a low-bandwidth or unstable network condition.
-- The screen is narrow, such as a mobile viewport.
+### CA-03 — Cidade única
 
----
+**Dado** que o geocoding retorna uma localidade válida, **quando** a resposta é processada, **então** o sistema consulta o forecast pelas coordenadas retornadas e exibe o clima atual e cinco dias.
 
-## Assumptions
+### CA-04 — Cidades homônimas
 
-- The application is a client-side web app with no server-side account system.
-- The project uses Open-Meteo as the weather source.
-- The default temperature unit is Celsius.
-- The forecast scope is five daily entries consisting of today and the following four days.
-- The application is intended primarily for occasional use and quick lookups.
-- The initial UI language is Brazilian Portuguese.
-- Users are not required to sign in to use the app.
-- Internet connectivity is available during normal usage.
+**Dado** que o geocoding retorna pelo menos duas localidades, **quando** a resposta é renderizada, **então** o sistema exibe opções com contexto geográfico, não consulta o forecast e só faz a consulta após uma seleção.
 
----
+### CA-05 — Nenhum resultado
 
-## Risks
+**Dado** que o geocoding retorna zero localidades, **quando** a resposta é processada, **então** o sistema exibe uma mensagem de nenhum resultado, não consulta o forecast e mantém o formulário disponível.
 
-### R1 — API instability or service limits
-The weather service may be unavailable or rate-limited, affecting the experience.
+### CA-06 — Resultado completo
 
-Mitigation:
-- Display clear error states.
-- Offer retry actions.
-- Avoid making the app appear broken when the external service fails.
+**Dado** que o forecast retorna dados válidos, **quando** a tela é renderizada, **então** ela exibe cidade, país, temperatura atual, condição e exatamente cinco dias em ordem cronológica.
 
-### R2 — Ambiguous city names
-The same city name can represent multiple places across countries, states, or regions.
+### CA-07 — Troca de unidade
 
-Mitigation:
-- Show results with context like country or state.
-- Allow user selection before finalizing the forecast view.
+**Dado** que um resultado está em Celsius, **quando** o usuário seleciona Fahrenheit, **então** clima atual, máximas e mínimas exibem valores convertidos, `°F`, e nenhuma nova chamada de rede é feita.
 
-### R3 — Poor user experience on small screens
-A dense or poorly organized layout can make weather details hard to scan on mobile devices.
+### CA-08 — Falha e retry
 
-Mitigation:
-- Use a mobile-first layout.
-- Prioritize labels, spacing, and readable typography.
+**Dado** que uma requisição falha ou excede o timeout, **quando** o erro é recebido, **então** o sistema exibe uma mensagem compreensível e uma ação de retry; ao acioná-la, repete a última operação.
 
-### R4 — Incorrect conversion logic
-Temperature conversions between Celsius and Fahrenheit may produce wrong values if implemented inconsistently.
+### CA-09 — Concorrência
 
-Mitigation:
-- Centralize conversion logic in a single testable function.
-- Validate the output across both current and forecast values.
+**Dado** que uma busca anterior ainda está pendente, **quando** uma nova busca é iniciada e termina primeiro, **então** a resposta anterior não pode substituir o resultado da busca mais recente.
 
-### R5 — Incomplete weather data
-Some locations or dates may not return complete weather information.
+### CA-10 — Acessibilidade e responsividade
 
-Mitigation:
-- Show placeholders and explicit messages where data is unavailable.
-- Avoid a broken or misleading UI.
+**Dado** que o usuário navega por teclado em viewport mobile, **quando** percorre o fluxo de busca e seleção, **então** todos os controles são alcançáveis, têm nome acessível, não exigem gesto de apontador e não causam rolagem horizontal.
 
----
+## 6. Requisitos não funcionais
 
-## Out of Scope
+- **RNF-01 Responsividade:** suportar larguras de 320 px, 768 px e 1280 px sem perda de conteúdo, sobreposição ou rolagem horizontal.
+- **RNF-02 Acessibilidade:** usar HTML semântico, labels associados, foco visível, mensagens anunciáveis por tecnologia assistiva e contraste compatível com WCAG 2.1 AA para texto e controles.
+- **RNF-03 Performance:** exibir feedback de carregamento no mesmo ciclo da submissão; em condições normais, a aplicação deve renderizar o resultado até 2 s após a última resposta da API.
+- **RNF-04 Timeout:** encerrar cada requisição externa após 10 s e convertê-la em estado de erro recuperável.
+- **RNF-05 Confiabilidade:** respostas fora de ordem, campos ausentes, códigos WMO desconhecidos e erros HTTP não devem quebrar a aplicação.
+- **RNF-06 Privacidade:** não enviar dados além do termo de busca e coordenadas necessárias às APIs; não usar cookies, autenticação ou armazenamento persistente para dados pessoais.
+- **RNF-07 Compatibilidade:** funcionar nos navegadores modernos suportados pelo Vite e pelo Playwright configurado no projeto.
+- **RNF-08 Localização:** textos da interface em pt-BR; datas formatadas com locale `pt-BR`; números e unidades consistentes em toda a tela.
 
-The following items are intentionally excluded from the initial version of the product:
+## 7. Matriz de rastreabilidade
 
-- User accounts and authentication.
-- Saving favorites or recurring cities.
-- Weather alerts or severe weather warnings.
-- Hourly forecast beyond the daily forecast requirement.
-- Automatic user geolocation detection.
-- Offline access or local caching of historical weather data.
-- Multi-language support beyond Brazilian Portuguese in the first release.
-- Social sharing, maps, or advanced visualizations.
-- Scheduled notifications or push alerts.
+| User Story | Critérios de aceitação relacionados | Requisitos não funcionais relevantes |
+| --- | --- | --- |
+| US-01 Buscar uma cidade pelo nome | CA-01, CA-02, CA-05, CA-09 | RNF-02, RNF-03, RNF-04, RNF-05, RNF-08 |
+| US-02 Distinguir cidades homônimas | CA-04, CA-05, CA-09, CA-10 | RNF-01, RNF-02, RNF-05, RNF-07, RNF-08 |
+| US-03 Ver o clima atual e cinco dias de previsão | CA-03, CA-06 | RNF-03, RNF-05, RNF-07, RNF-08 |
+| US-04 Alternar entre Celsius e Fahrenheit sem refazer a busca | CA-07 | RNF-05, RNF-08 |
+| US-05 Receber estados claros e tentar novamente em caso de erro | CA-01, CA-08, CA-09 | RNF-03, RNF-04, RNF-05, RNF-07 |
+| US-06 Usar todo o fluxo em dispositivo mobile | CA-02, CA-04, CA-06, CA-07, CA-10 | RNF-01, RNF-02, RNF-03, RNF-07, RNF-08 |
 
----
+Cada User Story deve ter, no mínimo, um teste derivado dos critérios de aceitação listados. Os RNFs relacionados devem ser verificados nos testes e nas revisões técnicas aplicáveis à história.
 
-## Open Questions
+## 8. Estratégia de validação
 
-1. Should the app offer automatic geolocation based on the user's browser permissions?
-2. Should users be able to save favorite cities for future access?
-3. Should the app include hourly forecast cards in a future iteration?
-4. Should the app show additional weather details such as wind speed, humidity, sunrise, or precipitation?
-5. Is there a formal target for response time and service availability?
-6. Should the UI support any additional locale or regional format beyond Brazilian Portuguese?
+- Testes unitários para normalização, conversão, arredondamento, mapeamento WMO e transformação das respostas da API.
+- Testes de serviço para sucesso, zero resultados, HTTP não-2xx, timeout, JSON inválido e campos ausentes.
+- Testes de componentes para estados inicial, validação, carregamento, seleção, sucesso, vazio, erro, retry e troca de unidade.
+- Teste de integração ou E2E para busca completa, cidade homônima, nova busca e proteção contra resposta fora de ordem.
+- Teste E2E de teclado e viewports de 320 px, 768 px e 1280 px.
 
----
+## 9. Premissas e decisões
+
+- A aplicação é client-side e usa Open-Meteo sem chave de API.
+- A previsão é sempre hoje mais quatro dias.
+- Celsius é a unidade inicial; a API é consultada em Celsius e a conversão ocorre na apresentação.
+- A interface inicial e todas as mensagens são em pt-BR.
+- Não há persistência de consultas, contas ou dados pessoais.
+
+## 10. Riscos e mitigação
+
+| Risco | Mitigação |
+| --- | --- |
+| Indisponibilidade, limite ou mudança de contrato da API | Timeout, tratamento de HTTP/JSON, estado de erro, retry e testes com respostas simuladas. |
+| Ambiguidade de nomes | Exibir contexto geográfico e exigir seleção quando houver múltiplos resultados. |
+| Respostas fora de ordem | Identificar cada busca e aceitar somente a resposta da operação atual. |
+| Dados incompletos | Validar o contrato e exibir placeholders por campo ou dia. |
+| Conversão inconsistente | Manter valores-base em Celsius e cobrir conversão com testes unitários. |
+| Uso em tela pequena | Validar breakpoints, foco por teclado e ausência de rolagem horizontal em E2E. |
